@@ -12,6 +12,7 @@ import * as iptables from './lib/iptables';
 import { checkTruthy } from './lib/validation';
 
 import log from './lib/supervisor-console';
+import bodyParser = require('body-parser');
 
 function getKeyFromReq(req: express.Request): string | undefined {
 	// Check query for key
@@ -120,6 +121,7 @@ export class SupervisorAPI {
 		this.healthchecks = healthchecks;
 
 		this.api.disable('x-powered-by');
+		this.api.use(bodyParser.json());
 		this.api.use(expressLogger);
 
 		this.api.get('/v1/healthy', async (_req, res) => {

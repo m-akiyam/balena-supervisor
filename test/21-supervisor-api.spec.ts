@@ -22,6 +22,7 @@ describe('SupervisorAPI', () => {
 	let healthCheckStubs: SinonStub[];
 	const request = supertest(`http://127.0.0.1:${mockedOptions.listenPort}`);
 	let cloudKey: string;
+	let scopedCloudKey: string;
 
 	before(async () => {
 		// Stub health checks so we can modify them whenever needed
@@ -33,6 +34,9 @@ describe('SupervisorAPI', () => {
 		// See the module to know what has been stubbed
 		api = await mockedAPI.create();
 		cloudKey = await apiSecrets.getCloudApiSecret();
+		scopedCloudKey = (
+			await apiSecrets.getApiSecretForService(2, 1, [{ type: 'app', appId: 2 }])
+		).key;
 		// Start test API
 		return api.listen(
 			ALLOWED_INTERFACES,
@@ -140,6 +144,14 @@ describe('SupervisorAPI', () => {
 					});
 			});
 
+			it('returns 401 for an application which is out-of-scope', async () => {
+				await request
+					.get('/v2/applications/1/state')
+					.set('Accept', 'application/json')
+					.set('Authorization', `Bearer ${scopedCloudKey}`)
+					.expect(401);
+			});
+
 			it('returns 400 for invalid appId', async () => {
 				await request
 					.get('/v2/applications/123invalid/state')
@@ -168,6 +180,30 @@ describe('SupervisorAPI', () => {
 							sampleResponses.V2.GET['/applications/9000/state'].body,
 						);
 					});
+			});
+		});
+
+		describe('/v2/applications/:appId/...', () => {
+			it('should purge data', async () => {
+				await request
+					.post('/v2/applications/1/purge')
+					.send({
+						force: false,
+					})
+					.set('Accept', 'application/json')
+					.set('Authorization', `Bearer ${cloudKey}`)
+					.expect(200);
+			});
+
+			it('should not purge data if out-of-scope', async () => {
+				await request
+					.post('/v2/applications/1/purge')
+					.send({
+						force: false,
+					})
+					.set('Accept', 'application/json')
+					.set('Authorization', `Bearer ${scopedCloudKey}`)
+					.expect(401);
 			});
 		});
 
