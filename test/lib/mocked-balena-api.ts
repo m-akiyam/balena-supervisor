@@ -30,10 +30,7 @@ api.balenaBackend = {
 		}
 	},
 	getDeviceHandler: (req, res) => {
-		const uuid =
-			req.query['$filter'] != null
-				? req.query['$filter'].match(/uuid eq '(.*)'/)[1]
-				: null;
+		const uuid = /\(uuid='([0-9a-f]+)'\)/.exec(req.url)?.[1];
 		if (uuid != null) {
 			return res.json({
 				d: _.filter(api.balenaBackend!.devices, (dev) => dev.uuid === uuid),
